@@ -1,4 +1,3 @@
-# VPC module (creates 2 public + 2 private subnets across AZs)
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 4.0"
@@ -20,12 +19,11 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
-# ECS cluster
+
 resource "aws_ecs_cluster" "this" {
   name = "${var.name_prefix}-cluster"
 }
 
-# IAM role for task execution (Fargate needs this)
 resource "aws_iam_role" "ecs_task_execution" {
   name = "${var.name_prefix}-task-exec-role"
   assume_role_policy = jsonencode({
@@ -43,7 +41,6 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Security groups
 resource "aws_security_group" "alb_sg" {
   name        = "${var.name_prefix}-alb-sg"
   description = "ALB SG - allow HTTP"
@@ -86,7 +83,6 @@ resource "aws_security_group" "ecs_sg" {
   }
 }
 
-# ALB in public subnets
 resource "aws_lb" "alb" {
   name               = "${var.name_prefix}-alb"
   internal           = false
@@ -121,13 +117,12 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-# ECS Task Definition (Fargate)
 resource "aws_ecs_task_definition" "task" {
   family                   = "${var.name_prefix}-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = "256"    # adjust as needed
-  memory                   = "512"    # adjust as needed
+  cpu                      = "256"    
+  memory                   = "512"    
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
 
   container_definitions = jsonencode([
@@ -161,13 +156,11 @@ resource "aws_ecs_task_definition" "task" {
   ])
 }
 
-# Create CloudWatch log group (optional - avoid errors)
 resource "aws_cloudwatch_log_group" "ecs" {
   name              = "/ecs/${var.name_prefix}"
   retention_in_days = 7
 }
 
-# ECS Service with ALB integration
 resource "aws_ecs_service" "service" {
   name            = "${var.name_prefix}-svc"
   cluster         = aws_ecs_cluster.this.id
