@@ -1,2 +1,12 @@
 node_modules/
 package-lock.json
+.env
+.terraform/
+.terraform.lock.hcl
+
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*.tfvars
